@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Family Registry — Server Roleplay</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ── CONFIG: Ganti nilai ini setelah deploy ── */
+    /* SUPABASE_URL dan SUPABASE_ANON_KEY adalah READ-ONLY, aman di-expose ke publik */
+
+    :root {
+      --bg:         #0d0b09;
+      --surface:    #13110e;
+      --surface2:   #1c1814;
+      --border:     #2e2820;
+      --border-l:   #3d3328;
+      --gold:       #c9a96e;
+      --gold-dim:   #8a6d3e;
+      --gold-pale:  #f0ddb8;
+      --ivory:      #e8dfc8;
+      --muted:      #7a6f5e;
+      --red:        #c45c5c;
+      --green:      #5c9e6e;
+      --font-serif: 'Playfair Display', serif;
+      --font-body:  'Cormorant Garamond', serif;
+      --font-mono:  'DM Mono', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--ivory);
+      font-family: var(--font-body);
+      font-size: 18px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Noise texture overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Header ── */
+    header {
+      position: relative;
+      padding: 60px 24px 48px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      top: -60px; left: 50%;
+      transform: translateX(-50%);
+      width: 500px; height: 300px;
+      background: radial-gradient(ellipse, rgba(201,169,110,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .header-ornament {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.4em;
+      color: var(--gold-dim);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    header h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 700;
+      color: var(--gold-pale);
+      letter-spacing: 0.02em;
+      line-height: 1.2;
+    }
+
+    header h1 em {
+      font-style: italic;
+      color: var(--gold);
+    }
+
+    .header-sub {
+      margin-top: 12px;
+      font-size: 1rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px auto;
+      max-width: 300px;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border-l);
+    }
+
+    .divider-icon { color: var(--gold-dim); font-size: 14px; }
+
+    /* ── Main container ── */
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    /* ── Search & filter bar ── */
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      margin: 40px 0 32px;
+      flex-wrap: wrap;
+    }
+
+    .search-wrap {
+      flex: 1;
+      min-width: 200px;
+      position: relative;
+    }
+
+    .search-wrap::before {
+      content: '⌕';
+      position: absolute;
+      left: 14px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    input[type="search"], .filter-select {
+      background: var(--surface);
+      border: 1px solid var(--border-l);
+      color: var(--ivory);
+      font-family: var(--font-body);
+      font-size: 16px;
+      border-radius: 4px;
+      padding: 10px 14px 10px 36px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .filter-select {
+      padding-left: 14px;
+      width: auto;
+      cursor: pointer;
+    }
+
+    input[type="search"]:focus, .filter-select:focus {
+      border-color: var(--gold-dim);
+    }
+
+    input[type="search"]::placeholder { color: var(--muted); }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: flex;
+      gap: 24px;
+      padding: 16px 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stat-num {
+      font-family: var(--font-serif);
+      font-size: 1.8rem;
+      color: var(--gold);
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    /* ── Family Grid ── */
+    .family-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 24px;
+    }
+
+    /* ── Family Card ── */
+    .family-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 28px;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .family-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px; height: 100%;
+      background: var(--gold-dim);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .family-card:hover {
+      border-color: var(--border-l);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    .family-card:hover::before { opacity: 1; }
+
+    .card-marga {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      color: var(--gold-dim);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .card-name {
+      font-family: var(--font-serif);
+      font-size: 1.4rem;
+      color: var(--gold-pale);
+      margin-bottom: 16px;
+      line-height: 1.3;
+    }
+
+    .card-couple {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .couple-member {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .couple-role {
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .couple-name {
+      font-size: 1rem;
+      color: var(--ivory);
+    }
+
+    .couple-sep {
+      flex-shrink: 0;
+      color: var(--gold-dim);
+      font-size: 1.2rem;
+    }
+
+    .card-meta {
+      display: flex;
+      gap: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .meta-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .meta-badge .icon { font-size: 0.9rem; }
+
+    /* ── Loading & empty states ── */
+    .state-center {
+      text-align: center;
+      padding: 80px 24px;
+      color: var(--muted);
+    }
+
+    .state-center .icon-lg { font-size: 3rem; margin-bottom: 16px; }
+    .state-center p { font-style: italic; }
+
+    .spinner {
+      width: 32px; height: 32px;
+      border: 2px solid var(--border-l);
+      border-top-color: var(--gold-dim);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── DETAIL PAGE (single family) ── */
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 32px 0 24px;
+      color: var(--gold-dim);
+      text-decoration: none;
+      font-size: 0.9rem;
+      letter-spacing: 0.1em;
+      transition: color 0.2s;
+    }
+
+    .back-btn:hover { color: var(--gold); }
+
+    .family-hero {
+      padding: 48px 0 32px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 40px;
+    }
+
+    .family-hero-marga {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.4em;
+      color: var(--gold-dim);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .family-hero h2 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      color: var(--gold-pale);
+      margin-bottom: 24px;
+      line-height: 1.2;
+    }
+
+    .couple-display {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+
+    .couple-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 20px 28px;
+      min-width: 160px;
+    }
+
+    .couple-card-role {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      color: var(--gold-dim);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .couple-card-name {
+      font-family: var(--font-serif);
+      font-size: 1.3rem;
+      color: var(--gold-pale);
+    }
+
+    .couple-card-discord {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .couple-heart {
+      font-size: 2rem;
+      color: var(--gold-dim);
+    }
+
+    /* ── Section block ── */
+    .section {
+      margin-bottom: 48px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .section-title h3 {
+      font-family: var(--font-serif);
+      font-size: 1.3rem;
+      color: var(--gold-pale);
+      font-weight: 400;
+      font-style: italic;
+    }
+
+    .section-title .count-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: var(--border-l);
+      color: var(--gold-dim);
+      padding: 2px 8px;
+      border-radius: 2px;
+    }
+
+    .section-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Children list ── */
+    .children-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .child-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 16px 20px;
+      position: relative;
+    }
+
+    .child-order {
+      position: absolute;
+      top: 12px; right: 14px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .child-gender-icon { font-size: 1.4rem; margin-bottom: 8px; }
+    .child-name { font-size: 1rem; color: var(--ivory); margin-bottom: 4px; }
+    .child-gender {
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .child-discord { font-size: 0.8rem; color: var(--gold-dim); margin-top: 6px; }
+    .child-notes { font-size: 0.85rem; color: var(--muted); margin-top: 6px; font-style: italic; }
+
+    /* ── Other members ── */
+    .members-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .member-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 20px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+    }
+
+    .member-relation {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--gold-dim);
+      text-transform: uppercase;
+      min-width: 120px;
+    }
+
+    .member-name { font-size: 1rem; color: var(--ivory); }
+    .member-discord { font-size: 0.85rem; color: var(--muted); margin-left: auto; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-style: italic;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .family-grid { grid-template-columns: 1fr; }
+      .couple-display { flex-direction: column; gap: 16px; }
+      .couple-heart { transform: rotate(90deg); }
+      .stats-bar { gap: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-ornament">✦ Server Roleplay ✦</div>
+  <h1>Family <em>Registry</em></h1>
+  <p class="header-sub">Catatan ikatan keluarga di dunia roleplay kita</p>
+  <div class="divider">
+    <span class="divider-icon">❧</span>
+  </div>
+</header>
+
+<div class="container" id="app">
+  <!-- Content rendered by JS -->
+</div>
+
+<footer>
+  <p>Family Registry — Server Roleplay &nbsp;·&nbsp; Data dikelola melalui Discord Bot</p>
+  <p style="margin-top:6px; font-size:0.75rem; opacity:0.5;">Gunakan /buat-keluarga di Discord untuk mendaftarkan keluargamu</p>
+</footer>
+
+<script>
+// ============================================================
+// CONFIG — ISI SETELAH SETUP SUPABASE
+// Anon key AMAN di-expose ke publik (hanya bisa READ)
+// ============================================================
+const SUPABASE_URL      = "GANTI_DENGAN_SUPABASE_URL";       // e.g. https://xxxx.supabase.co
+const SUPABASE_ANON_KEY = "GANTI_DENGAN_ANON_KEY";           // public anon key dari Settings > API
+
+// ============================================================
+// ROUTER — deteksi halaman dari URL hash
+// #/family/UUID → detail page
+// (kosong)       → list page
+// ============================================================
+function getRoute() {
+  const hash = location.hash.replace('#', '');
+  const match = hash.match(/^\/family\/([a-f0-9-]{36})$/);
+  return match ? { page: 'detail', id: match[1] } : { page: 'list' };
+}
+
+window.addEventListener('hashchange', render);
+window.addEventListener('load', render);
+
+async function render() {
+  const route = getRoute();
+  const app   = document.getElementById('app');
+
+  if (route.page === 'detail') {
+    await renderDetail(app, route.id);
+  } else {
+    await renderList(app);
+  }
+}
+
+// ============================================================
+// SUPABASE FETCH HELPER
+// ============================================================
+async function sbFetch(path, params = {}) {
+  const url = new URL(`${SUPABASE_URL}/rest/v1/${path}`);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+
+  const res = await fetch(url.toString(), {
+    headers: {
+      'apikey':        SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'Accept':        'application/json',
+      'Prefer':        'count=exact',
+    }
+  });
+
+  if (!res.ok) throw new Error(`Supabase error: ${res.status}`);
+  return res.json();
+}
+
+// ============================================================
+// LIST PAGE
+// ============================================================
+let allFamilies = [];
+let searchTimer;
+
+async function renderList(app) {
+  app.innerHTML = `
+    <div class="toolbar">
+      <div class="search-wrap">
+        <input type="search" id="search-input" placeholder="Cari nama keluarga, suami, atau istri…">
+      </div>
+    </div>
+    <div class="stats-bar" id="stats-bar">
+      <div class="stat-item">
+        <div class="spinner" style="width:20px;height:20px;border-width:2px;"></div>
+      </div>
+    </div>
+    <div id="grid-container">
+      <div class="state-center">
+        <div class="spinner"></div>
+        <p>Memuat data keluarga…</p>
+      </div>
+    </div>
+  `;
+
+  try {
+    allFamilies = await sbFetch('families', { select: '*', order: 'created_at.desc' });
+  } catch (e) {
+    document.getElementById('grid-container').innerHTML = `
+      <div class="state-center">
+        <div class="icon-lg">⚠️</div>
+        <p>Gagal memuat data. Pastikan konfigurasi Supabase sudah benar.</p>
+        <p style="margin-top:8px; font-family: var(--font-mono); font-size:12px; opacity:0.5;">${e.message}</p>
+      </div>`;
+    return;
+  }
+
+  // Ambil data anak untuk setiap keluarga
+  const childCounts = {};
+  if (allFamilies.length > 0) {
+    try {
+      const ids = allFamilies.map(f => f.id);
+      // Batch: ambil semua anak
+      const children = await sbFetch('children', {
+        select: 'family_id',
+        'family_id': `in.(${ids.join(',')})`,
+      });
+      children.forEach(c => {
+        childCounts[c.family_id] = (childCounts[c.family_id] || 0) + 1;
+      });
+    } catch(_) {}
+  }
+
+  // Hitung stats
+  renderStats(allFamilies);
+
+  // Setup search
+  const input = document.getElementById('search-input');
+  input.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => filterAndRender(childCounts), 200);
+  });
+
+  filterAndRender(childCounts);
+}
+
+function renderStats(families) {
+  const totalChildren = 0; // will update
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat-item">
+      <div class="stat-num">${families.length}</div>
+      <div class="stat-label">Keluarga Terdaftar</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">${families.length * 2}</div>
+      <div class="stat-label">Pasangan</div>
+    </div>
+  `;
+}
+
+function filterAndRender(childCounts) {
+  const q = document.getElementById('search-input')?.value?.toLowerCase() || '';
+  const filtered = allFamilies.filter(f =>
+    !q ||
+    f.family_name.toLowerCase().includes(q) ||
+    f.husband_name.toLowerCase().includes(q) ||
+    f.wife_name.toLowerCase().includes(q) ||
+    (f.marga || '').toLowerCase().includes(q)
+  );
+
+  const grid = document.getElementById('grid-container');
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `
+      <div class="state-center">
+        <div class="icon-lg">🔍</div>
+        <p>${q ? `Tidak ada keluarga dengan kata kunci "<strong>${q}</strong>"` : 'Belum ada keluarga yang terdaftar.'}</p>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = `<div class="family-grid">${filtered.map(f => familyCard(f, childCounts[f.id] || 0)).join('')}</div>`;
+}
+
+function familyCard(f, childCount) {
+  const date   = new Date(f.created_at).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' });
+  const marga  = f.marga ? `<div class="card-marga">Marga ${escHtml(f.marga)}</div>` : '';
+  const childLabel = childCount === 0 ? 'Belum ada anak' : `${childCount} anak`;
+
+  return `
+    <a class="family-card" href="#/family/${f.id}">
+      ${marga}
+      <div class="card-name">${escHtml(f.family_name)}</div>
+      <div class="card-couple">
+        <div class="couple-member">
+          <span class="couple-role">Suami</span>
+          <span class="couple-name">${escHtml(f.husband_name)}</span>
+        </div>
+        <span class="couple-sep">♥</span>
+        <div class="couple-member">
+          <span class="couple-role">Istri</span>
+          <span class="couple-name">${escHtml(f.wife_name)}</span>
+        </div>
+      </div>
+      <div class="card-meta">
+        <span class="meta-badge"><span class="icon">👶</span>${childLabel}</span>
+        <span class="meta-badge"><span class="icon">📅</span>${date}</span>
+      </div>
+    </a>`;
+}
+
+// ============================================================
+// DETAIL PAGE
+// ============================================================
+async function renderDetail(app, id) {
+  app.innerHTML = `
+    <a href="#" class="back-btn">← Kembali ke Daftar</a>
+    <div class="state-center">
+      <div class="spinner"></div>
+      <p>Memuat data keluarga…</p>
+    </div>`;
+
+  let family, children, members;
+  try {
+    [family]  = await sbFetch('families', { select: '*', id: `eq.${id}` });
+    children  = await sbFetch('children',       { select: '*', family_id: `eq.${id}`, order: 'birth_order.asc' });
+    members   = await sbFetch('family_members', { select: '*', family_id: `eq.${id}` });
+  } catch(e) {
+    app.innerHTML += `<div class="state-center"><p>Gagal memuat: ${e.message}</p></div>`;
+    return;
+  }
+
+  if (!family) {
+    app.innerHTML = `
+      <a href="#" class="back-btn">← Kembali ke Daftar</a>
+      <div class="state-center">
+        <div class="icon-lg">🏚️</div>
+        <p>Keluarga tidak ditemukan.</p>
+      </div>`;
+    return;
+  }
+
+  document.title = `${family.family_name} — Family Registry`;
+
+  const childrenHTML = children.length === 0
+    ? `<div class="state-center" style="padding:32px"><p>Belum ada anak yang terdaftar.</p></div>`
+    : `<div class="children-list">${children.map(childCard).join('')}</div>`;
+
+  const membersHTML = members.length === 0
+    ? `<div class="state-center" style="padding:32px"><p>Tidak ada anggota lain.</p></div>`
+    : `<div class="members-list">${members.map(memberRow).join('')}</div>`;
+
+  const marriedDate = new Date(family.created_at).toLocaleDateString('id-ID', {
+    day: 'numeric', month: 'long', year: 'numeric'
+  });
+
+  app.innerHTML = `
+    <a href="#" class="back-btn">← Kembali ke Daftar</a>
+
+    <div class="family-hero">
+      ${family.marga ? `<div class="family-hero-marga">Marga ${escHtml(family.marga)}</div>` : ''}
+      <h2>${escHtml(family.family_name)}</h2>
+      <div class="couple-display">
+        <div class="couple-card">
+          <div class="couple-card-role">👨 Suami</div>
+          <div class="couple-card-name">${escHtml(family.husband_name)}</div>
+          <div class="couple-card-discord">Discord: ${escHtml(family.husband_id)}</div>
+        </div>
+        <div class="couple-heart">♥</div>
+        <div class="couple-card">
+          <div class="couple-card-role">👩 Istri</div>
+          <div class="couple-card-name">${escHtml(family.wife_name)}</div>
+          <div class="couple-card-discord">Discord: ${escHtml(family.wife_id)}</div>
+        </div>
+      </div>
+      <p style="margin-top:24px; font-size:0.85rem; color:var(--muted); font-style:italic;">
+        Terdaftar pada ${marriedDate}
+      </p>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <h3>Anak-anak</h3>
+        <span class="count-badge">${children.length}</span>
+        <div class="section-line"></div>
+      </div>
+      ${childrenHTML}
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        <h3>Anggota Keluarga Lainnya</h3>
+        <span class="count-badge">${members.length}</span>
+        <div class="section-line"></div>
+      </div>
+      ${membersHTML}
+    </div>
+  `;
+}
+
+function childCard(c) {
+  const genderIcon = c.gender === 'laki-laki' ? '👦' : c.gender === 'perempuan' ? '👧' : '🧒';
+  const ordinal    = ['Pertama','Kedua','Ketiga','Keempat','Kelima','Keenam'][c.birth_order - 1] || `ke-${c.birth_order}`;
+  return `
+    <div class="child-card">
+      <div class="child-order">Anak ${ordinal}</div>
+      <div class="child-gender-icon">${genderIcon}</div>
+      <div class="child-name">${escHtml(c.name)}</div>
+      <div class="child-gender">${c.gender || '—'}</div>
+      ${c.discord_id ? `<div class="child-discord">@${escHtml(c.discord_id)}</div>` : ''}
+      ${c.notes ? `<div class="child-notes">${escHtml(c.notes)}</div>` : ''}
+    </div>`;
+}
+
+function memberRow(m) {
+  return `
+    <div class="member-row">
+      <span class="member-relation">${escHtml(m.relation)}</span>
+      <span class="member-name">${escHtml(m.name)}</span>
+      ${m.discord_id ? `<span class="member-discord">@${escHtml(m.discord_id)}</span>` : ''}
+    </div>`;
+}
+
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+
+</body>
+</html>
